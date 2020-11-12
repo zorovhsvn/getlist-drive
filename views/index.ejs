@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Get list drive</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <h2>Get danh sách drive</h2>
+        <div class="panel panel-primary">
+            <div class="panel-heading">Thêm Link</div>
+            <div class="panel-body">
+                <form id="frmLink">
+                    <div class="form-group">
+                        <label for="id">FolderID</label>
+                        <input class="form-control" id="id" name="id" value="1lRN3tA1Vs7_O5A2M3qZ78PqktoaC0Gkj" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="list">List</label>
+                        <textarea class="form-control" id="list" name="list" rows="10" readonly></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="response">Danh Sách</label>
+                        <textarea class="form-control" id="response" name="response" rows="10"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <button class="btn btn-success" type="submit">Get list</button>
+                        <button id="btnGet" class="btn btn-primary" type="button">Get info</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+<script>
+toastr.options = {
+    "closeButton": false,
+    "debug": false,
+    "newestOnTop": false,
+    "progressBar": false,
+    "positionClass": "toast-bottom-right",
+    "preventDuplicates": false,
+    "onclick": null,
+    "showDuration": "300",
+    "hideDuration": "1000",
+    "timeOut": "5000",
+    "extendedTimeOut": "1000",
+    "showEasing": "swing",
+    "hideEasing": "linear",
+    "showMethod": "fadeIn",
+    "hideMethod": "fadeOut"
+};
+$(document).on("submit", "#frmLink", function(e) {
+    e.preventDefault();
+    $.ajax({
+        type: "POST",
+        url: "/list",
+        data: $(this).serialize(),
+        success: function(data) {
+            if(data.status == 1) {
+                $("#list").html("");
+                for(var i=0;i<data.data.items.length;i++) {
+                    let item = data.data.items[i];
+                    $("#list").append(`${item.id}\n`);
+                }
+                toastr.success("Get danh sách thành công");
+            } else {
+                toastr.error("Lỗi get danh sách");
+            }
+        }
+    });
+});
+async function getInfo(fileId) {
+    return await new Promise((resolve,reject) => {
+        $.ajax({
+            type: "POST",
+            url: "/get",
+            data: `id=${fileId}`,
+            success: function(data) {
+                if(data.status == 1) {
+                    toastr.success(`Get ${fileId} thành công`);
+                    resolve(data.data);
+                } else {
+                    toastr.error(`Get ${fileId} lỗi`);
+                    reject();
+                }
+            }
+        });
+    })
+}
+$(document).on("click", "#btnGet", async function() {
+    let list = $("#list").val().split("\n");
+    if(list.length > 0 && list[0] != "") {
+        $("#response").html("");
+        for(var i=0;i<list.length;i++) {
+            let fileId = list[i];
+            if(fileId) {
+                let data = await getInfo(fileId).catch(() => false);
+                if(data) {
+                    if(data.kind == "drive#file") {
+                        console.log(data);
+                        $("#response").append(`${data.title}|https://drive.google.com/file/d/${data.id}/view?usp=sharing\n`);
+                    }
+                }
+            }
+        }
+    } else {
+        toastr.error("Không có dữ liệu");
+    }
+})
+</script>
+</html>
